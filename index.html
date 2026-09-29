@@ -150,17 +150,13 @@ $('authBtn').onclick = async () => {
   try {
     try { await account.deleteSession('current'); } catch(e){}
     if (isLogin){
-      await account.createEmailPasswordSession(email, pass);
+await account.createEmailPasswordSession(email, pass);
+const freshUser = await account.get();
+await ensureProfile(freshUser, name);
     } else {
-      const user = await account.create(ID.unique(), email, pass, name || 'Без имени');
-      try {
-        await databases.createDocument(DB_ID, PROFILES, ID.unique(), {
-          userId: user.$id,
-          name: name || 'Без имени',
-          email: email
-        });
-      } catch(e){ console.warn('profile:', e.message); }
-      await account.createEmailPasswordSession(email, pass);
+  const user = await account.create(ID.unique(), email, pass, name || 'Без имени');
+  await ensureProfile(user, name);
+  await account.createEmailPasswordSession(email, pass);
     }
     location.reload();
   } catch(e){
@@ -172,16 +168,35 @@ $('logoutBtn').onclick = async () => {
   try { await account.deleteSession('current'); } catch(e){}
   location.reload();
 };
+async function ensureProfile(user, nameHint){
+  try {
+    const res = await databases.listDocuments(DB_ID, PROFILES, [
+      Query.equal('userId', user.$id),
+      Query.limit(1)
+    ]);
+    if (res.documents.length) return res.documents[0];
+  } catch(e){ console.warn('check profile:', e.message); }
+
+  try {
+    return await databases.createDocument(DB_ID, PROFILES, ID.unique(), {
+      userId: user.$id,
+      name: nameHint || user.name || (user.email || '').split('@')[0] || 'Без имени',
+      email: user.email || ''
+    });
+  } catch(e){ console.warn('create profile:', e.message); return null; }
+}
 
 (async () => {
   try {
     const u = await account.get();
     me = u;
+    await ensureProfile(u);
     show('mainScreen');
     loadUsers();
   } catch(e) {
     show('authScreen');
   }
+})();
 })();function chatIdFor(a,b){ return [a,b].sort().join('_'); }
 
 $('tabChats').onclick = () => {
