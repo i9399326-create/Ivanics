@@ -72,7 +72,7 @@
 </head><body>
 <div id="app">
   <header id="topbar" class="hidden">
-    <h1 id="title">MyChat</h1>
+    <h1>MyChat</h1>
     <button id="logoutBtn">Выйти</button>
   </header>
 
@@ -108,7 +108,7 @@
     </div>
   </div>
 </div><script>
-const { Client, Account, Databases, Storage, ID, Query, Permission, Role } = Appwrite;
+const { Client, Account, Databases, Storage, ID, Query } = Appwrite;
 
 const client = new Client()
   .setEndpoint('https://fra.cloud.appwrite.io/v1')
@@ -141,33 +141,6 @@ $('authSwitch').onclick = () => {
   $('authErr').textContent = '';
 };
 
-$('authBtn').onclick = async () => {
-  const email = $('emailInput').value.trim();
-  const pass  = $('passInput').value;
-  const name  = $('nameInput').value.trim();
-  $('authErr').textContent = '';
-  $('authBtn').disabled = true;
-  try {
-    try { await account.deleteSession('current'); } catch(e){}
-    if (isLogin){
-await account.createEmailPasswordSession(email, pass);
-const freshUser = await account.get();
-await ensureProfile(freshUser, name);
-    } else {
-  const user = await account.create(ID.unique(), email, pass, name || 'Без имени');
-  await ensureProfile(user, name);
-  await account.createEmailPasswordSession(email, pass);
-    }
-    location.reload();
-  } catch(e){
-    $('authErr').textContent = e.message || 'Ошибка';
-  } finally { $('authBtn').disabled = false; }
-};
-
-$('logoutBtn').onclick = async () => {
-  try { await account.deleteSession('current'); } catch(e){}
-  location.reload();
-};
 async function ensureProfile(user, nameHint){
   try {
     const res = await databases.listDocuments(DB_ID, PROFILES, [
@@ -186,6 +159,35 @@ async function ensureProfile(user, nameHint){
   } catch(e){ console.warn('create profile:', e.message); return null; }
 }
 
+$('authBtn').onclick = async () => {
+  const email = $('emailInput').value.trim();
+  const pass  = $('passInput').value;
+  const name  = $('nameInput').value.trim();
+  $('authErr').textContent = '';
+  $('authBtn').disabled = true;
+  try {
+    try { await account.deleteSession('current'); } catch(e){}
+
+    if (isLogin){
+      await account.createEmailPasswordSession(email, pass);
+      const freshUser = await account.get();
+      await ensureProfile(freshUser, name);
+    } else {
+      const user = await account.create(ID.unique(), email, pass, name || 'Без имени');
+      await ensureProfile(user, name);
+      await account.createEmailPasswordSession(email, pass);
+    }
+    location.reload();
+  } catch(e){
+    $('authErr').textContent = e.message || 'Ошибка';
+  } finally { $('authBtn').disabled = false; }
+};
+
+$('logoutBtn').onclick = async () => {
+  try { await account.deleteSession('current'); } catch(e){}
+  location.reload();
+};
+
 (async () => {
   try {
     const u = await account.get();
@@ -196,7 +198,6 @@ async function ensureProfile(user, nameHint){
   } catch(e) {
     show('authScreen');
   }
-})();
 })();function chatIdFor(a,b){ return [a,b].sort().join('_'); }
 
 $('tabChats').onclick = () => {
@@ -236,7 +237,10 @@ async function loadChats(){
   const list = $('listView');
   list.innerHTML = '<div class="loading">Загрузка...</div>';
   try {
-    const res = await databases.listDocuments(DB_ID, MESSAGES, [Query.orderDesc('createdAt'), Query.limit(200)]);
+    const res = await databases.listDocuments(DB_ID, MESSAGES, [
+      Query.orderDesc('createdAt'),
+      Query.limit(200)
+    ]);
     const seen = new Set();
     const chats = [];
     res.documents.forEach(m => {
@@ -279,7 +283,6 @@ async function openChat(chatId, peerName, peerId){
   $('messages').innerHTML = '<div class="loading">Загрузка...</div>';
 
   if (unsubMsgs){ unsubMsgs(); unsubMsgs = null; }
-
   await loadMessages(chatId);
 
   try {
@@ -351,7 +354,7 @@ async function sendText(){
   if (!text) return;
   msgInput.value = ''; msgInput.style.height = 'auto';
   $('sendBtn').disabled = true;
-  await writeMessage(text, null, 'text');
+  await writeMessage(text, '', 'text');
 }
 
 async function writeMessage(text, fileId, type){
@@ -369,7 +372,6 @@ async function writeMessage(text, fileId, type){
   } catch(e){ alert('Ошибка отправки: ' + e.message); }
 }
 
-// ==== ГОЛОСОВЫЕ ====
 let mediaRecorder = null, audioChunks = [], isRecording = false;
 
 $('voiceBtn').onclick = async () => {
