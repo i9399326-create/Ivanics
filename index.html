@@ -148,17 +148,21 @@ $('authBtn').onclick = async () => {
   $('authErr').textContent = '';
   $('authBtn').disabled = true;
   try {
+    try { await account.deleteSession('current'); } catch(e){}
     if (isLogin){
       await account.createEmailPasswordSession(email, pass);
     } else {
       const user = await account.create(ID.unique(), email, pass, name || 'Без имени');
-      await databases.createDocument(DB_ID, PROFILES, ID.unique(), {
-        userId: user.$id,
-        name: name || 'Без имени',
-        email: email
-      });
+      try {
+        await databases.createDocument(DB_ID, PROFILES, ID.unique(), {
+          userId: user.$id,
+          name: name || 'Без имени',
+          email: email
+        });
+      } catch(e){ console.warn('profile:', e.message); }
       await account.createEmailPasswordSession(email, pass);
     }
+    location.reload();
   } catch(e){
     $('authErr').textContent = e.message || 'Ошибка';
   } finally { $('authBtn').disabled = false; }
