@@ -15,6 +15,7 @@
          align-items:center;border-bottom:1px solid #252542;flex-shrink:0}
   header h1{font-size:18px;font-weight:600}
   header button{background:none;border:none;color:#8b8bff;font-size:14px;padding:6px 10px}
+  .menu-btn{font-size:22px;color:#8b8bff;padding:0 8px}
   .screen{flex:1;display:flex;flex-direction:column;overflow:hidden}
   .hidden{display:none!important}
   .auth{padding:24px;justify-content:center;gap:12px}
@@ -36,7 +37,9 @@
   .item:active{background:#1a1a2e}
   .avatar{width:44px;height:44px;border-radius:50%;background:#5b5bff;color:#fff;
           display:flex;align-items:center;justify-content:center;font-size:18px;
-          font-weight:600;flex-shrink:0}
+          font-weight:600;flex-shrink:0;overflow:hidden;background-size:cover;
+          background-position:center}
+  .avatar img{width:100%;height:100%;object-fit:cover}
   .item-info{flex:1;min-width:0}
   .item-info .name{font-size:15px;font-weight:500;margin-bottom:2px}
   .item-info .sub{font-size:13px;color:#888;white-space:nowrap;overflow:hidden;
@@ -45,6 +48,8 @@
   .chat-header{padding:12px 16px;background:#1a1a2e;display:flex;align-items:center;
                gap:12px;border-bottom:1px solid #252542;flex-shrink:0}
   .chat-header .back{background:none;border:none;color:#8b8bff;font-size:22px;padding:0 4px}
+  .chat-header .call-btn{background:none;border:none;color:#4CAF50;font-size:22px;
+                         padding:6px 10px;margin-left:auto}
   .messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:6px;
             -webkit-overflow-scrolling:touch}
   .msg{max-width:78%;padding:9px 13px;border-radius:16px;font-size:15px;
@@ -68,12 +73,41 @@
   .attach.rec{color:#ff5c5c!important;animation:pulse 1s infinite}
   @keyframes pulse{50%{opacity:.4}}
   .loading{padding:40px;text-align:center;color:#666}
+
+  /* Модалки и панель настроек */
+  .overlay{position:fixed;top:0;left:0;width:100%;height:100%;
+           background:rgba(15,15,26,.97);display:flex;flex-direction:column;
+           justify-content:center;align-items:center;gap:20px;z-index:9999}
+  .call-btn-lg{color:#fff;padding:14px 32px;border:none;border-radius:12px;
+               font-size:16px;font-weight:600}
+  .side-panel{position:fixed;top:0;left:0;width:280px;height:100%;background:#1a1a2e;
+              z-index:10000;padding:24px 20px;display:flex;flex-direction:column;
+              gap:16px;transform:translateX(-100%);transition:transform .25s;
+              border-right:1px solid #252542;overflow-y:auto}
+  .side-panel.open{transform:translateX(0)}
+  .side-panel h2{font-size:20px;margin-bottom:12px}
+  .side-panel label{font-size:13px;color:#888;display:block;margin-top:8px}
+  .side-panel input{padding:10px;background:#0f0f1a;border:1px solid #2a2a4a;
+                    border-radius:8px;color:#eee;font-size:15px;outline:none;width:100%}
+  .side-panel .big-avatar{width:80px;height:80px;border-radius:50%;background:#5b5bff;
+                          display:flex;align-items:center;justify-content:center;
+                          font-size:32px;font-weight:600;margin:0 auto 12px;
+                          background-size:cover;background-position:center;overflow:hidden}
+  .side-panel .big-avatar img{width:100%;height:100%;object-fit:cover}
+  .side-panel button{padding:12px;background:#5b5bff;border:none;border-radius:10px;
+                     color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+  .side-panel .ghost{background:none;border:1px solid #2a2a4a;color:#8b8bff}
+  .side-panel .danger{background:#f44336}
+  .backdrop{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);
+            z-index:9999;display:none}
+  .backdrop.show{display:block}
 </style>
 </head><body>
 <div id="app">
   <header id="topbar" class="hidden">
+    <button class="menu-btn" id="menuBtn">☰</button>
     <h1>MyChat</h1>
-    <button id="logoutBtn">Выйти</button>
+    <div style="width:40px"></div>
   </header>
 
   <div id="authScreen" class="screen auth">
@@ -99,6 +133,7 @@
       <button class="back" id="backBtn">←</button>
       <div class="avatar" id="peerAvatar">?</div>
       <div class="item-info"><div class="name" id="peerName">...</div></div>
+      <button class="call-btn" id="callBtn">📞</button>
     </div>
     <div class="messages" id="messages"></div>
     <div class="composer">
@@ -107,6 +142,54 @@
       <button id="sendBtn" disabled>➤</button>
     </div>
   </div>
+</div>
+
+<!-- Окно входящего звонка -->
+<div id="incomingCallModal" class="overlay hidden">
+  <div class="avatar" id="incomingAvatar" style="width:90px;height:90px;font-size:36px">?</div>
+  <h2 id="incomingName">Звонок</h2>
+  <p style="color:#888">Входящий звонок...</p>
+  <div style="display:flex;gap:16px">
+    <button class="call-btn-lg" id="acceptCallBtn" style="background:#4CAF50">Принять</button>
+    <button class="call-btn-lg" id="declineCallBtn" style="background:#f44336">Отклонить</button>
+  </div>
+</div>
+
+<!-- Окно активного звонка -->
+<div id="activeCallModal" class="overlay hidden">
+  <div class="avatar" id="activeAvatar" style="width:100px;height:100px;font-size:42px">?</div>
+  <h2 id="activeName">...</h2>
+  <p id="callStatus" style="color:#888">Соединение...</p>
+  <button class="call-btn-lg" id="endCallBtn" style="background:#f44336">Завершить</button>
+</div>
+
+<!-- Задний фон панели -->
+<div class="backdrop" id="backdrop"></div>
+
+<!-- Боковая панель настроек -->
+<div class="side-panel" id="sidePanel">
+  <h2>Настройки</h2>
+
+  <div class="big-avatar" id="myAvatar">?</div>
+  <button class="ghost" id="changeAvatarBtn">Сменить аватар</button>
+  <input type="file" id="avatarInput" accept="image/*" style="display:none">
+
+  <label>Имя</label>
+  <input id="settingsName" placeholder="Ваше имя">
+
+  <label>Email</label>
+  <input id="settingsEmail" disabled style="opacity:.5">
+
+  <button id="saveProfileBtn">Сохранить</button>
+
+  <label>Новый пароль</label>
+  <input id="newPassword" type="password" placeholder="Оставьте пустым, чтобы не менять">
+  <button class="ghost" id="changePasswordBtn">Сменить пароль</button>
+
+  <hr style="border:none;border-top:1px solid #252542;margin:12px 0">
+
+  <button class="danger" id="logoutBtn">Выйти из аккаунта</button>
+  <button class="ghost" id="closePanelBtn">Закрыть</button>
 </div><script>
 const { Client, Account, Databases, Storage, ID, Query } = Appwrite;
 
@@ -117,6 +200,7 @@ const client = new Client()
 const DB_ID    = '6abbe1eb001c12fd2855';
 const PROFILES = 'profiles';
 const MESSAGES = 'messages';
+const CALLS    = 'calls';
 const BUCKET   = 'chat-files';
 
 const account   = new Account(client);
@@ -124,14 +208,33 @@ const databases = new Databases(client);
 const storage   = new Storage(client);
 
 const $ = id => document.getElementById(id);
-let me = null, currentChat = null, unsubMsgs = null, unsubList = null, isLogin = true;
+let me = null, myProfile = null, currentChat = null,
+    unsubMsgs = null, unsubList = null, isLogin = true;
 
 function show(screen){
   ['authScreen','mainScreen','chatScreen'].forEach(s => $(s).classList.add('hidden'));
   $(screen).classList.remove('hidden');
-  $('topbar').classList.toggle('hidden', screen === 'authScreen' || screen === 'chatScreen');
+  $('topbar').classList.toggle('hidden', screen === 'authScreen');
 }
 
+function fileUrl(fileId){
+  if (!fileId) return '';
+  return 'https://fra.cloud.appwrite.io/v1/storage/buckets/'+BUCKET+'/files/'+fileId+'/view?project='+client.config.project;
+}
+
+function setAvatar(el, name, avatarId){
+  if (avatarId){
+    el.style.backgroundImage = 'url('+fileUrl(avatarId)+')';
+    el.textContent = '';
+  } else {
+    el.style.backgroundImage = '';
+    el.textContent = (name||'?')[0].toUpperCase();
+  }
+}
+
+function esc(s){ return (s||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+
+// ==================== АВТОРИЗАЦИЯ ====================
 $('authSwitch').onclick = () => {
   isLogin = !isLogin;
   $('authTitle').textContent = isLogin ? 'Вход' : 'Регистрация';
@@ -144,8 +247,7 @@ $('authSwitch').onclick = () => {
 async function ensureProfile(user, nameHint){
   try {
     const res = await databases.listDocuments(DB_ID, PROFILES, [
-      Query.equal('userId', user.$id),
-      Query.limit(1)
+      Query.equal('userId', user.$id), Query.limit(1)
     ]);
     if (res.documents.length) return res.documents[0];
   } catch(e){ console.warn('check profile:', e.message); }
@@ -154,7 +256,8 @@ async function ensureProfile(user, nameHint){
     return await databases.createDocument(DB_ID, PROFILES, ID.unique(), {
       userId: user.$id,
       name: nameHint || user.name || (user.email || '').split('@')[0] || 'Без имени',
-      email: user.email || ''
+      email: user.email || '',
+      avatarId: ''
     });
   } catch(e){ console.warn('create profile:', e.message); return null; }
 }
@@ -167,11 +270,10 @@ $('authBtn').onclick = async () => {
   $('authBtn').disabled = true;
   try {
     try { await account.deleteSession('current'); } catch(e){}
-
     if (isLogin){
       await account.createEmailPasswordSession(email, pass);
-      const freshUser = await account.get();
-      await ensureProfile(freshUser, name);
+      const u = await account.get();
+      await ensureProfile(u, name);
     } else {
       const user = await account.create(ID.unique(), email, pass, name || 'Без имени');
       await ensureProfile(user, name);
@@ -188,17 +290,76 @@ $('logoutBtn').onclick = async () => {
   location.reload();
 };
 
+// ==================== НАСТРОЙКИ (боковая панель) ====================
+function openPanel(){
+  $('sidePanel').classList.add('open');
+  $('backdrop').classList.add('show');
+  if (myProfile){
+    $('settingsName').value = myProfile.name || '';
+    $('settingsEmail').value = myProfile.email || '';
+    setAvatar($('myAvatar'), myProfile.name, myProfile.avatarId);
+  }
+}
+function closePanel(){
+  $('sidePanel').classList.remove('open');
+  $('backdrop').classList.remove('show');
+}
+$('menuBtn').onclick = openPanel;
+$('closePanelBtn').onclick = closePanel;
+$('backdrop').onclick = closePanel;
+
+$('changeAvatarBtn').onclick = () => $('avatarInput').click();
+$('avatarInput').onchange = async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  e.target.value = '';
+  if (!myProfile) return;
+  try {
+    const file = new File([f], 'avatar_'+me.$id+'_'+Date.now()+'.jpg', { type: f.type });
+    const up = await storage.createFile(BUCKET, ID.unique(), file);
+    await databases.updateDocument(DB_ID, PROFILES, myProfile.$id, { avatarId: up.$id });
+    myProfile.avatarId = up.$id;
+    setAvatar($('myAvatar'), myProfile.name, myProfile.avatarId);
+    alert('Аватар обновлён');
+  } catch(err){ alert('Ошибка загрузки: ' + err.message); }
+};
+
+$('saveProfileBtn').onclick = async () => {
+  if (!myProfile) return;
+  const newName = $('settingsName').value.trim();
+  if (!newName){ alert('Имя не может быть пустым'); return; }
+  try {
+    await databases.updateDocument(DB_ID, PROFILES, myProfile.$id, { name: newName });
+    myProfile.name = newName;
+    alert('Сохранено');
+    closePanel();
+  } catch(e){ alert('Ошибка: ' + e.message); }
+};
+
+$('changePasswordBtn').onclick = async () => {
+  const np = $('newPassword').value;
+  if (np.length < 8){ alert('Пароль должен быть не короче 8 символов'); return; }
+  try {
+    await account.updatePassword(np);
+    $('newPassword').value = '';
+    alert('Пароль изменён');
+  } catch(e){ alert('Ошибка: ' + e.message); }
+};
+
+// ==================== СТАРТ ====================
 (async () => {
   try {
     const u = await account.get();
     me = u;
-    await ensureProfile(u);
+    myProfile = await ensureProfile(u);
     show('mainScreen');
     loadUsers();
+    startCallsListener();
   } catch(e) {
     show('authScreen');
   }
-})();function chatIdFor(a,b){ return [a,b].sort().join('_'); }
+})();// ==================== СПИСКИ ====================
+function chatIdFor(a,b){ return [a,b].sort().join('_'); }
 
 $('tabChats').onclick = () => {
   $('tabChats').classList.add('active'); $('tabUsers').classList.remove('active');
@@ -221,14 +382,15 @@ async function loadUsers(){
     users.forEach(u => {
       const el = document.createElement('div');
       el.className = 'item';
-      el.innerHTML = `<div class="avatar">${(u.name||'?')[0].toUpperCase()}</div>
+      el.innerHTML = `<div class="avatar"></div>
         <div class="item-info"><div class="name">${esc(u.name||'?')}</div>
         <div class="sub">${esc(u.email||'')}</div></div>`;
-      el.onclick = () => openChat(chatIdFor(me.$id, u.userId), u.name || 'Чат', u.userId);
+      setAvatar(el.querySelector('.avatar'), u.name, u.avatarId);
+      el.onclick = () => openChat(chatIdFor(me.$id, u.userId), u.name || 'Чат', u.userId, u.avatarId);
       list.appendChild(el);
     });
   } catch(e){
-    list.innerHTML = '<div class="empty">Ошибка загрузки: '+esc(e.message)+'</div>';
+    list.innerHTML = '<div class="empty">Ошибка: '+esc(e.message)+'</div>';
   }
 }
 
@@ -238,8 +400,7 @@ async function loadChats(){
   list.innerHTML = '<div class="loading">Загрузка...</div>';
   try {
     const res = await databases.listDocuments(DB_ID, MESSAGES, [
-      Query.orderDesc('createdAt'),
-      Query.limit(200)
+      Query.orderDesc('createdAt'), Query.limit(200)
     ]);
     const seen = new Set();
     const chats = [];
@@ -256,18 +417,22 @@ async function loadChats(){
       const parts = c.chatId.split('_');
       const peerId = parts.find(p => p !== me.$id);
       if (!peerId) continue;
-      let uname = 'Чат';
+      let uname = 'Чат', uavatar = '';
       try {
         const pr = await databases.listDocuments(DB_ID, PROFILES, [Query.equal('userId', peerId), Query.limit(1)]);
-        if (pr.documents.length) uname = pr.documents[0].name || 'Чат';
+        if (pr.documents.length){
+          uname = pr.documents[0].name || 'Чат';
+          uavatar = pr.documents[0].avatarId || '';
+        }
       } catch(e){}
       const el = document.createElement('div');
       el.className = 'item';
       const preview = c.type === 'voice' ? '🎤 Голосовое' : (c.text || '');
-      el.innerHTML = `<div class="avatar">${(uname||'?')[0].toUpperCase()}</div>
+      el.innerHTML = `<div class="avatar"></div>
         <div class="item-info"><div class="name">${esc(uname)}</div>
         <div class="sub">${esc(preview)}</div></div>`;
-      el.onclick = () => openChat(c.chatId, uname, peerId);
+      setAvatar(el.querySelector('.avatar'), uname, uavatar);
+      el.onclick = () => openChat(c.chatId, uname, peerId, uavatar);
       list.appendChild(el);
     }
   } catch(e){
@@ -275,10 +440,11 @@ async function loadChats(){
   }
 }
 
-async function openChat(chatId, peerName, peerId){
-  currentChat = { chatId, peerId };
+// ==================== ЧАТ ====================
+async function openChat(chatId, peerName, peerId, peerAvatar){
+  currentChat = { chatId, peerId, peerName };
   $('peerName').textContent = peerName;
-  $('peerAvatar').textContent = (peerName||'?')[0].toUpperCase();
+  setAvatar($('peerAvatar'), peerName, peerAvatar);
   show('chatScreen');
   $('messages').innerHTML = '<div class="loading">Загрузка...</div>';
 
@@ -312,8 +478,7 @@ async function loadMessages(chatId){
       el.className = 'msg ' + (mine ? 'mine' : 'theirs');
       let inner = '';
       if (m.type === 'voice' && m.fileId){
-        const url = 'https://fra.cloud.appwrite.io/v1/storage/buckets/'+BUCKET+'/files/'+m.fileId+'/view?project='+client.config.project;
-        inner += '<audio controls src="'+url+'"></audio>';
+        inner += '<audio controls src="'+fileUrl(m.fileId)+'"></audio>';
       } else if (m.text){
         inner += esc(m.text);
       }
@@ -336,6 +501,7 @@ $('backBtn').onclick = () => {
   loadChats();
 };
 
+// ==================== ОТПРАВКА ТЕКСТА ====================
 const msgInput = $('msgInput');
 msgInput.addEventListener('input', () => {
   $('sendBtn').disabled = !msgInput.value.trim();
@@ -372,6 +538,7 @@ async function writeMessage(text, fileId, type){
   } catch(e){ alert('Ошибка отправки: ' + e.message); }
 }
 
+// ==================== ГОЛОСОВЫЕ ====================
 let mediaRecorder = null, audioChunks = [], isRecording = false;
 
 $('voiceBtn').onclick = async () => {
@@ -404,7 +571,183 @@ $('voiceBtn').onclick = async () => {
   }
 };
 
-function esc(s){ return (s||'').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+// ==================== ЗВОНКИ (WebRTC) ====================
+let peerConnection = null, localStream = null, currentCall = null,
+    callSub = null, currentCallListener = null;
+const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+function createPC(){
+  peerConnection = new RTCPeerConnection(rtcConfig);
+
+  peerConnection.ontrack = (e) => {
+    const audio = new Audio();
+    audio.srcObject = e.streams[0];
+    audio.play().catch(()=>{});
+  };
+
+  peerConnection.onicecandidate = async (e) => {
+    if (e.candidate && currentCall){
+      try {
+        await databases.updateDocument(DB_ID, CALLS, currentCall.$id, {
+          candidate: JSON.stringify(e.candidate)
+        });
+      } catch(err){}
+    }
+  };
+
+  return peerConnection;
+}
+
+async function startCall(){
+  if (!currentChat) return;
+  if (currentCall){ alert('Уже в звонке'); return; }
+
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const pc = createPC();
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    currentCall = await databases.createDocument(DB_ID, CALLS, ID.unique(), {
+      fromId: me.$id,
+      toId: currentChat.peerId,
+      callerName: (myProfile && myProfile.name) || 'Пользователь',
+      status: 'ringing',
+      sdp: JSON.stringify(offer),
+      type: 'offer',
+      candidate: ''
+    });
+
+    $('activeName').textContent = currentChat.peerName;
+    setAvatar($('activeAvatar'), currentChat.peerName, '');
+    $('activeCallModal').classList.remove('hidden');
+    $('callStatus').textContent = 'Исходящий звонок...';
+
+    listenOwnCall(currentCall.$id);
+  } catch(e){
+    alert('Не удалось позвонить: ' + e.message);
+    endCall(false);
+  }
+}
+
+function listenOwnCall(callId){
+  if (currentCallListener){ currentCallListener(); currentCallListener = null; }
+  currentCallListener = client.subscribe(
+    'databases.'+DB_ID+'.tables.'+CALLS+'.rows.'+callId,
+    async (res) => {
+      const call = res.payload;
+      if (!call) return;
+      if (call.status === 'accepted' && call.sdp && call.type === 'answer'){
+        $('callStatus').textContent = 'Соединение установлено';
+        try {
+          await peerConnection.setRemoteDescription(
+            new RTCSessionDescription(JSON.parse(call.sdp))
+          );
+        } catch(e){ console.warn(e); }
+      }
+      if (call.candidate && peerConnection){
+        try {
+          await peerConnection.addIceCandidate(
+            new RTCIceCandidate(JSON.parse(call.candidate))
+          );
+        } catch(e){}
+      }
+      if (call.status === 'declined' || call.status === 'ended'){
+        endCall(false);
+      }
+    }
+  );
+}
+
+async function acceptCall(){
+  if (!currentCall) return;
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const pc = createPC();
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+    await pc.setRemoteDescription(
+      new RTCSessionDescription(JSON.parse(currentCall.sdp))
+    );
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    await databases.updateDocument(DB_ID, CALLS, currentCall.$id, {
+      status: 'accepted',
+      sdp: JSON.stringify(answer),
+      type: 'answer'
+    });
+
+    $('incomingCallModal').classList.add('hidden');
+
+    $('activeName').textContent = currentCall.callerName || 'Звонок';
+    setAvatar($('activeAvatar'), currentCall.callerName || '?', '');
+    $('activeCallModal').classList.remove('hidden');
+    $('callStatus').textContent = 'Соединение установлено';
+
+    listenOwnCall(currentCall.$id);
+  } catch(e){
+    alert('Ошибка при приёме: ' + e.message);
+    endCall(true);
+  }
+}
+
+async function endCall(updateStatus){
+  if (updateStatus && currentCall){
+    try {
+      await databases.updateDocument(DB_ID, CALLS, currentCall.$id, { status: 'ended' });
+    } catch(e){}
+  }
+  if (peerConnection){ try { peerConnection.close(); } catch(e){} peerConnection = null; }
+  if (localStream){ localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  if (currentCallListener){ currentCallListener(); currentCallListener = null; }
+  currentCall = null;
+  $('activeCallModal').classList.add('hidden');
+  $('incomingCallModal').classList.add('hidden');
+}
+
+$('callBtn').onclick = startCall;
+$('acceptCallBtn').onclick = acceptCall;
+$('declineCallBtn').onclick = async () => {
+  if (currentCall){
+    try {
+      await databases.updateDocument(DB_ID, CALLS, currentCall.$id, { status: 'declined' });
+    } catch(e){}
+  }
+  endCall(false);
+};
+$('endCallBtn').onclick = () => endCall(true);
+
+// Глобальный слушатель входящих звонков
+async function startCallsListener(){
+  try {
+    callSub = await client.subscribe(
+      'databases.'+DB_ID+'.tables.'+CALLS+'.rows',
+      (res) => {
+        const call = res.payload;
+        if (!call) return;
+        if (call.toId === me.$id && call.status === 'ringing'
+            && !currentCall && call.type === 'offer'){
+          currentCall = call;
+          $('incomingName').textContent = call.callerName || 'Звонок';
+          setAvatar($('incomingAvatar'), call.callerName || '?', '');
+          $('incomingCallModal').classList.remove('hidden');
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.frequency.value = 800; gain.gain.value = 0.1;
+            osc.start();
+            setTimeout(()=>{ try { osc.stop(); ctx.close(); } catch(e){} }, 600);
+          } catch(e){}
+        }
+      }
+    );
+  } catch(e){ console.warn('calls sub:', e); }
+}
 </script>
 </body>
 </html>
