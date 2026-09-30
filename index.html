@@ -9,14 +9,15 @@
 <script src="https://cdn.jsdelivr.net/npm/appwrite@17.0.0"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden}
   body{font-family:-apple-system,Roboto,sans-serif;background:#0f0f1a;color:#eee;
-       height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+       height:100dvh;display:flex;flex-direction:column}
   header{padding:14px 16px;background:#1a1a2e;display:flex;justify-content:space-between;
          align-items:center;border-bottom:1px solid #252542;flex-shrink:0}
   header h1{font-size:18px;font-weight:600}
   header button{background:none;border:none;color:#8b8bff;font-size:14px;padding:6px 10px}
   .menu-btn{font-size:22px;color:#8b8bff;padding:0 8px}
-  .screen{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .screen{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
   .hidden{display:none!important}
   .auth{padding:24px;justify-content:center;gap:12px}
   .auth h2{font-size:22px;text-align:center;margin-bottom:8px}
@@ -31,14 +32,14 @@
   .tabs button{flex:1;padding:14px;background:none;border:none;color:#888;font-size:15px;
                border-bottom:2px solid transparent}
   .tabs button.active{color:#8b8bff;border-bottom-color:#8b8bff}
-  .list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .list{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
   .item{padding:14px 16px;border-bottom:1px solid #1a1a2e;display:flex;gap:12px;
         align-items:center;cursor:pointer}
   .item:active{background:#1a1a2e}
   .avatar{width:44px;height:44px;border-radius:50%;background:#5b5bff;color:#fff;
           display:flex;align-items:center;justify-content:center;font-size:18px;
-          font-weight:600;flex-shrink:0;overflow:hidden;background-size:cover;
-          background-position:center}
+          font-weight:600;flex-shrink:0;overflow:hidden;
+          background-size:cover;background-position:center}
   .avatar img{width:100%;height:100%;object-fit:cover}
   .item-info{flex:1;min-width:0}
   .item-info .name{font-size:15px;font-weight:500;margin-bottom:2px}
@@ -50,8 +51,8 @@
   .chat-header .back{background:none;border:none;color:#8b8bff;font-size:22px;padding:0 4px}
   .chat-header .call-btn{background:none;border:none;color:#4CAF50;font-size:22px;
                          padding:6px 10px;margin-left:auto}
-  .messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:6px;
-            -webkit-overflow-scrolling:touch}
+  .messages{flex:1;min-height:0;overflow-y:auto;padding:12px;display:flex;flex-direction:column;
+            gap:6px;-webkit-overflow-scrolling:touch}
   .msg{max-width:78%;padding:9px 13px;border-radius:16px;font-size:15px;
        word-wrap:break-word;line-height:1.35}
   .msg.mine{align-self:flex-end;background:#5b5bff;color:#fff;border-bottom-right-radius:4px}
@@ -74,7 +75,6 @@
   @keyframes pulse{50%{opacity:.4}}
   .loading{padding:40px;text-align:center;color:#666}
 
-  /* Модалки и панель настроек */
   .overlay{position:fixed;top:0;left:0;width:100%;height:100%;
            background:rgba(15,15,26,.97);display:flex;flex-direction:column;
            justify-content:center;align-items:center;gap:20px;z-index:9999}
@@ -144,7 +144,6 @@
   </div>
 </div>
 
-<!-- Окно входящего звонка -->
 <div id="incomingCallModal" class="overlay hidden">
   <div class="avatar" id="incomingAvatar" style="width:90px;height:90px;font-size:36px">?</div>
   <h2 id="incomingName">Звонок</h2>
@@ -155,7 +154,6 @@
   </div>
 </div>
 
-<!-- Окно активного звонка -->
 <div id="activeCallModal" class="overlay hidden">
   <div class="avatar" id="activeAvatar" style="width:100px;height:100px;font-size:42px">?</div>
   <h2 id="activeName">...</h2>
@@ -163,34 +161,25 @@
   <button class="call-btn-lg" id="endCallBtn" style="background:#f44336">Завершить</button>
 </div>
 
-<!-- Задний фон панели -->
 <div class="backdrop" id="backdrop"></div>
 
-<!-- Боковая панель настроек -->
 <div class="side-panel" id="sidePanel">
   <h2>Настройки</h2>
-
   <div class="big-avatar" id="myAvatar">?</div>
   <button class="ghost" id="changeAvatarBtn">Сменить аватар</button>
   <input type="file" id="avatarInput" accept="image/*" style="display:none">
-
   <label>Имя</label>
   <input id="settingsName" placeholder="Ваше имя">
-
   <label>Email</label>
   <input id="settingsEmail" disabled style="opacity:.5">
-
   <button id="saveProfileBtn">Сохранить</button>
-
   <label>Новый пароль</label>
   <input id="newPassword" type="password" placeholder="Оставьте пустым, чтобы не менять">
   <button class="ghost" id="changePasswordBtn">Сменить пароль</button>
-
   <hr style="border:none;border-top:1px solid #252542;margin:12px 0">
-
   <button class="danger" id="logoutBtn">Выйти из аккаунта</button>
   <button class="ghost" id="closePanelBtn">Закрыть</button>
-</div><script>
+   </div><script>
 const { Client, Account, Databases, Storage, ID, Query } = Appwrite;
 
 const client = new Client()
@@ -223,6 +212,7 @@ function fileUrl(fileId){
 }
 
 function setAvatar(el, name, avatarId){
+  if (!el) return;
   if (avatarId){
     el.style.backgroundImage = 'url('+fileUrl(avatarId)+')';
     el.textContent = '';
@@ -290,7 +280,7 @@ $('logoutBtn').onclick = async () => {
   location.reload();
 };
 
-// ==================== НАСТРОЙКИ (боковая панель) ====================
+// ==================== НАСТРОЙКИ ====================
 function openPanel(){
   $('sidePanel').classList.add('open');
   $('backdrop').classList.add('show');
@@ -501,7 +491,7 @@ $('backBtn').onclick = () => {
   loadChats();
 };
 
-// ==================== ОТПРАВКА ТЕКСТА ====================
+// ==================== ОТПРАВКА ====================
 const msgInput = $('msgInput');
 msgInput.addEventListener('input', () => {
   $('sendBtn').disabled = !msgInput.value.trim();
@@ -574,33 +564,77 @@ $('voiceBtn').onclick = async () => {
 // ==================== ЗВОНКИ (WebRTC) ====================
 let peerConnection = null, localStream = null, currentCall = null,
     callSub = null, currentCallListener = null;
+let iAmCaller = false;
+let addedCandidates = new Set();
 const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+function ensureAudioEl(){
+  let el = document.getElementById('remoteAudio');
+  if (!el){
+    el = document.createElement('audio');
+    el.id = 'remoteAudio';
+    el.autoplay = true;
+    el.setAttribute('playsinline', '');
+    el.style.display = 'none';
+    document.body.appendChild(el);
+  }
+  return el;
+}
 
 function createPC(){
   peerConnection = new RTCPeerConnection(rtcConfig);
 
   peerConnection.ontrack = (e) => {
-    const audio = new Audio();
-    audio.srcObject = e.streams[0];
-    audio.play().catch(()=>{});
+    const audioEl = ensureAudioEl();
+    audioEl.srcObject = e.streams[0];
+    audioEl.play().catch(err => {
+      console.warn('audio play err:', err);
+      document.body.addEventListener('touchstart', () => audioEl.play().catch(()=>{}), {once:true});
+    });
   };
 
   peerConnection.onicecandidate = async (e) => {
-    if (e.candidate && currentCall){
-      try {
-        await databases.updateDocument(DB_ID, CALLS, currentCall.$id, {
-          candidate: JSON.stringify(e.candidate)
-        });
-      } catch(err){}
-    }
+    if (!e.candidate || !currentCall) return;
+    const field = iAmCaller ? 'candidate' : 'candidate2';
+    try {
+      const fresh = await databases.getDocument(DB_ID, CALLS, currentCall.$id);
+      const existing = fresh[field] || '';
+      await databases.updateDocument(DB_ID, CALLS, currentCall.$id, {
+        [field]: existing + JSON.stringify(e.candidate) + '\n'
+      });
+    } catch(err){ console.warn('cand save:', err.message); }
+  };
+
+  peerConnection.onconnectionstatechange = () => {
+    const st = peerConnection && peerConnection.connectionState;
+    console.log('PC:', st);
+    if (st === 'connected') $('callStatus').textContent = 'Разговор';
+    if (st === 'failed') $('callStatus').textContent = 'Соединение не удалось';
+    if (st === 'disconnected') $('callStatus').textContent = 'Связь пропала';
   };
 
   return peerConnection;
 }
 
+function processRemoteCandidates(raw){
+  if (!peerConnection || !raw) return;
+  const lines = raw.split('\n').filter(l => l.trim());
+  lines.forEach(line => {
+    if (addedCandidates.has(line)) return;
+    addedCandidates.add(line);
+    try {
+      const cand = JSON.parse(line);
+      peerConnection.addIceCandidate(new RTCIceCandidate(cand)).catch(()=>{});
+    } catch(e){}
+  });
+}
+
 async function startCall(){
   if (!currentChat) return;
   if (currentCall){ alert('Уже в звонке'); return; }
+
+  iAmCaller = true;
+  addedCandidates = new Set();
 
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -617,7 +651,8 @@ async function startCall(){
       status: 'ringing',
       sdp: JSON.stringify(offer),
       type: 'offer',
-      candidate: ''
+      candidate: '',
+      candidate2: ''
     });
 
     $('activeName').textContent = currentChat.peerName;
@@ -639,21 +674,21 @@ function listenOwnCall(callId){
     async (res) => {
       const call = res.payload;
       if (!call) return;
-      if (call.status === 'accepted' && call.sdp && call.type === 'answer'){
-        $('callStatus').textContent = 'Соединение установлено';
-        try {
-          await peerConnection.setRemoteDescription(
-            new RTCSessionDescription(JSON.parse(call.sdp))
-          );
-        } catch(e){ console.warn(e); }
+
+      const remoteField = iAmCaller ? 'candidate2' : 'candidate';
+      processRemoteCandidates(call[remoteField]);
+
+      if (iAmCaller && call.status === 'accepted' && call.sdp && call.type === 'answer'){
+        if (peerConnection && !peerConnection.currentRemoteDescription){
+          try {
+            await peerConnection.setRemoteDescription(
+              new RTCSessionDescription(JSON.parse(call.sdp))
+            );
+            $('callStatus').textContent = 'Соединение...';
+          } catch(e){ console.warn('set remote answer:', e); }
+        }
       }
-      if (call.candidate && peerConnection){
-        try {
-          await peerConnection.addIceCandidate(
-            new RTCIceCandidate(JSON.parse(call.candidate))
-          );
-        } catch(e){}
-      }
+
       if (call.status === 'declined' || call.status === 'ended'){
         endCall(false);
       }
@@ -663,6 +698,9 @@ function listenOwnCall(callId){
 
 async function acceptCall(){
   if (!currentCall) return;
+  iAmCaller = false;
+  addedCandidates = new Set();
+
   try {
     localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const pc = createPC();
@@ -681,11 +719,10 @@ async function acceptCall(){
     });
 
     $('incomingCallModal').classList.add('hidden');
-
     $('activeName').textContent = currentCall.callerName || 'Звонок';
     setAvatar($('activeAvatar'), currentCall.callerName || '?', '');
     $('activeCallModal').classList.remove('hidden');
-    $('callStatus').textContent = 'Соединение установлено';
+    $('callStatus').textContent = 'Соединение...';
 
     listenOwnCall(currentCall.$id);
   } catch(e){
@@ -703,7 +740,10 @@ async function endCall(updateStatus){
   if (peerConnection){ try { peerConnection.close(); } catch(e){} peerConnection = null; }
   if (localStream){ localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   if (currentCallListener){ currentCallListener(); currentCallListener = null; }
+  const audioEl = document.getElementById('remoteAudio');
+  if (audioEl){ audioEl.srcObject = null; }
   currentCall = null;
+  addedCandidates = new Set();
   $('activeCallModal').classList.add('hidden');
   $('incomingCallModal').classList.add('hidden');
 }
@@ -720,7 +760,6 @@ $('declineCallBtn').onclick = async () => {
 };
 $('endCallBtn').onclick = () => endCall(true);
 
-// Глобальный слушатель входящих звонков
 async function startCallsListener(){
   try {
     callSub = await client.subscribe(
@@ -731,6 +770,7 @@ async function startCallsListener(){
         if (call.toId === me.$id && call.status === 'ringing'
             && !currentCall && call.type === 'offer'){
           currentCall = call;
+          iAmCaller = false;
           $('incomingName').textContent = call.callerName || 'Звонок';
           setAvatar($('incomingAvatar'), call.callerName || '?', '');
           $('incomingCallModal').classList.remove('hidden');
