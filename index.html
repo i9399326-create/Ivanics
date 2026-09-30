@@ -179,7 +179,7 @@
   <hr style="border:none;border-top:1px solid #252542;margin:12px 0">
   <button class="danger" id="logoutBtn">Выйти из аккаунта</button>
   <button class="ghost" id="closePanelBtn">Закрыть</button>
-   </div><script>
+</div><script>
 const { Client, Account, Databases, Storage, ID, Query } = Appwrite;
 
 const client = new Client()
@@ -195,6 +195,17 @@ const BUCKET   = 'chat-files';
 const account   = new Account(client);
 const databases = new Databases(client);
 const storage   = new Storage(client);
+
+// ====== TURN/STUN для звонков ======
+const rtcConfig = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'turn:openrelay.metered.ca:80',  username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turns:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+  ]
+};
 
 const $ = id => document.getElementById(id);
 let me = null, myProfile = null, currentChat = null,
@@ -561,12 +572,11 @@ $('voiceBtn').onclick = async () => {
   }
 };
 
-// ==================== ЗВОНКИ (WebRTC) ====================
+// ==================== ЗВОНКИ ====================
 let peerConnection = null, localStream = null, currentCall = null,
     callSub = null, currentCallListener = null;
 let iAmCaller = false;
 let addedCandidates = new Set();
-const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
 function ensureAudioEl(){
   let el = document.getElementById('remoteAudio');
